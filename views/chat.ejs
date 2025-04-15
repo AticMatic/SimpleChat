@@ -4,9 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SimpleChat - Room</title>
+    <title>Chat Room - SimpleChat by Aticmatic</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 
 <body class="bg-gray-100 h-screen flex flex-col">
@@ -18,7 +19,7 @@
                 <label for="username-input" class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
                 <input type="text" id="username-input"
                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 py-2 px-3"
-                    placeholder="John Doe">
+                    placeholder="John Doe" autofocus>
                 <p id="username-error" class="text-red-500 text-sm mt-1 hidden">Please enter a display name</p>
             </div>
             <button id="start-chat-btn"
@@ -31,7 +32,7 @@
     <!-- Main Chat Interface -->
     <header class="bg-white shadow-sm">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-blue-600">SimpleChat</h1>
+            <h1 class="text-xl font-bold text-blue-600"><a href="https://simple-chat.aticmatic.com">SimpleChat</a></h1>
             <div class="flex items-center space-x-4">
                 <div class="text-sm text-gray-500">
                     Room ID: <span id="room-id" class="font-medium text-gray-900">
@@ -70,7 +71,11 @@
                         placeholder="Type a message...">
                     <button type="submit"
                         class="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition duration-200">
-                        Send
+                        <!-- Send svg -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12H9m6 0l-3-3m3 3l-3 3m6-6V6a2 2 0 00-2-2H6a2 2 0 00-2 2v6m0 0l3-3m-3 3l3 3" />
+                        </svg>
                     </button>
                 </form>
             </div>
@@ -128,6 +133,10 @@
         // Join room function
         function joinRoom() {
             socket.emit('join-room', { roomId, username });
+
+            // focus message typing input
+            messageInput.focus();
+
         }
 
         // Handle message submission
@@ -145,7 +154,19 @@
         copyLinkBtn.addEventListener('click', () => {
             const roomUrl = window.location.href;
             navigator.clipboard.writeText(roomUrl).then(() => {
-                alert('Room link copied to clipboard!');
+                // alert('Room link copied to clipboard!');
+                Toastify({
+                    text: "Room link copied to clipboard!",
+                    duration: 3000,
+                    close: true,
+                    gravity: "top",
+                    position: 'center',
+                    style: {
+                        background: "linear-gradient(to right, #00b09b, #96c93d)",
+                        borderRadius: "10px",
+                    },
+                    className: "toast-success"
+                }).showToast();
             }).catch(err => {
                 console.error('Could not copy text: ', err);
             });
@@ -233,6 +254,7 @@
             });
         }
     </script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 </body>
 
 </html>
