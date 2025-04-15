@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleChat - Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body class="bg-gray-100 h-screen flex flex-col">
+    <!-- Username Modal -->
+    <div id="username-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold mb-4">Enter Your Name</h2>
+            <div class="mb-4">
+                <label for="username-input" class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
+                <input type="text" id="username-input"
+                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 py-2 px-3"
+                    placeholder="John Doe">
+                <p id="username-error" class="text-red-500 text-sm mt-1 hidden">Please enter a display name</p>
+            </div>
+            <button id="start-chat-btn"
+                class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition duration-200">
+                Start Chatting
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Chat Interface -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-600">SimpleChat</h1>
+            <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-500">
+                    Room ID: <span id="room-id" class="font-medium text-gray-900">
+                        <%= roomId %>
+                    </span>
+                    <button id="copy-link-btn" class="ml-2 text-blue-600 hover:text-blue-800 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+                <span id="user-count"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    1 online
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-hidden max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex">
+        <!-- Chat messages -->
+        <div class="flex-1 flex flex-col bg-white rounded-lg shadow-sm overflow-hidden">
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto">
+                <div class="text-center text-gray-500 text-sm py-3">
+                    <p>Welcome to the chat room!</p>
+                    <p>Share this link with others to invite them.</p>
+                </div>
+            </div>
+
+            <div class="border-t p-4">
+                <form id="message-form" class="flex space-x-2">
+                    <input type="text" id="message-input"
+                        class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 py-2 px-3"
+                        placeholder="Type a message...">
+                    <button type="submit"
+                        class="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition duration-200">
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Users sidebar -->
+        <div class="hidden sm:block w-64 ml-6 bg-white rounded-lg shadow-sm p-4">
+            <h2 class="font-bold text-gray-700 mb-4">Users Online</h2>
+            <ul id="users-list" class="space-y-2">
+                <!-- Users will be added here -->
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        // Initialize socket.io
+        const socket = io();
+
+        // DOM elements
+        const usernameModal = document.getElementById('username-modal');
+        const usernameInput = document.getElementById('username-input');
+        const usernameError = document.getElementById('username-error');
+        const startChatBtn = document.getElementById('start-chat-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        const usersList = document.getElementById('users-list');
+        const userCount = document.getElementById('user-count');
+        const copyLinkBtn = document.getElementById('copy-link-btn');
+
+        // Get room ID from URL
+        const roomId = '<%= roomId %>';
+        let username = '';
+
+        // Handle username submission
+        startChatBtn.addEventListener('click', () => {
+            username = usernameInput.value.trim();
+            if (!username) {
+                usernameError.classList.remove('hidden');
+                return;
+            }
+
+            // Hide modal and join room
+            usernameModal.classList.add('hidden');
+            joinRoom();
+        });
+
+        // Allow pressing Enter to submit username
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                startChatBtn.click();
+            }
+        });
+
+        // Join room function
+        function joinRoom() {
+            socket.emit('join-room', { roomId, username });
+        }
+
+        // Handle message submission
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+
+            if (message) {
+                socket.emit('send-message', { message });
+                messageInput.value = '';
+            }
+        });
+
+        // Copy room link button
+        copyLinkBtn.addEventListener('click', () => {
+            const roomUrl = window.location.href;
+            navigator.clipboard.writeText(roomUrl).then(() => {
+                alert('Room link copied to clipboard!');
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+            });
+        });
+
+        // Socket events
+        socket.on('receive-message', (data) => {
+            addMessage(data);
+        });
+
+        socket.on('user-joined', (data) => {
+            addSystemMessage(`${data.username} joined the chat`);
+        });
+
+        socket.on('user-left', (data) => {
+            addSystemMessage(`${data.username} left the chat`);
+        });
+
+        socket.on('room-users', (data) => {
+            updateUsersList(data.users);
+        });
+
+        // Add message to chat
+        function addMessage(data) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `mb-4 ${data.userId === socket.id ? 'text-right' : ''}`;
+
+            const messageContent = document.createElement('div');
+            messageContent.className = `inline-block rounded-lg py-2 px-3 max-w-xs sm:max-w-md ${data.userId === socket.id
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`;
+
+            const nameSpan = document.createElement('div');
+            nameSpan.className = 'font-medium text-sm';
+            nameSpan.textContent = data.userId === socket.id ? 'You' : data.username;
+
+            const textSpan = document.createElement('div');
+            textSpan.className = 'mt-1';
+            textSpan.textContent = data.message;
+
+            const timeSpan = document.createElement('div');
+            timeSpan.className = 'text-xs text-gray-500 mt-1';
+            const messageTime = new Date(data.time);
+            timeSpan.textContent = messageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            messageContent.appendChild(nameSpan);
+            messageContent.appendChild(textSpan);
+            messageContent.appendChild(timeSpan);
+            messageDiv.appendChild(messageContent);
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Add system message
+        function addSystemMessage(message) {
+            const systemDiv = document.createElement('div');
+            systemDiv.className = 'text-center text-gray-500 text-sm py-2';
+            systemDiv.textContent = message;
+
+            chatMessages.appendChild(systemDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Update users list
+        function updateUsersList(users) {
+            usersList.innerHTML = '';
+            userCount.textContent = `${users.length} online`;
+
+            users.forEach(user => {
+                const listItem = document.createElement('li');
+                listItem.className = 'flex items-center space-x-2';
+
+                const userCircle = document.createElement('span');
+                userCircle.className = 'w-2 h-2 rounded-full bg-green-500';
+
+                const userName = document.createElement('span');
+                userName.className = user.id === socket.id ? 'font-medium' : '';
+                userName.textContent = user.id === socket.id ? `${user.username} (You)` : user.username;
+
+                listItem.appendChild(userCircle);
+                listItem.appendChild(userName);
+                usersList.appendChild(listItem);
+            });
+        }
+    </script>
+</body>
+
+</html>

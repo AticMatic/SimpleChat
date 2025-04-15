@@ -1,0 +1,11 @@
+/* Any additional custom styles can go here */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* You can add more custom styles as needed */
